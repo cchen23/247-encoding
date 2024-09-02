@@ -1,9 +1,13 @@
 #!/bin/bash
-#SBATCH --time=15:10:00
+#SBATCH --time=10:10:00
 #SBATCH --mem=64GB
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
-#SBATCH -o 'logs/%A.log'
+#SBATCH --open-mode=truncate
+#SBATCH -o 'logs/%x.log'
+#SBATCH -e 'logs/%x.err'
+#SBATCH --mail-type=fail # send email if job fails
+#SBATCH --mail-user=cc27@princeton.edu
 
 if [[ "$HOSTNAME" == *"tiger"* ]]
 then

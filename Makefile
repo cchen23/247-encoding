@@ -13,9 +13,9 @@ PRJCT_ID := tfs
 
 ############## tfs electrode ids ##############
 # 625 Electrode IDs
-SID := 625
-E_LIST := $(shell seq 1 105)
-BC := 
+# SID := 625
+# E_LIST := $(shell seq 1 105)
+# BC := 
 
 # 676 Electrode IDs
 # SID := 676
@@ -28,9 +28,9 @@ BC :=
 # BC :=
 
 # 798 Electrode IDs
-# SID := 798
-# E_LIST := $(shell seq 1 198)
-# BC :=
+SID := 798
+E_LIST := $(shell seq 1 198)
+BC :=
 
 # Sig file will override whatever electrodes you choose
 SIG_FN := 
@@ -93,8 +93,8 @@ CONVERSATION_IDX := 0
 EMB := blenderbot
 EMB := gpt2-xl
 EMB := blenderbot-small
-EMB := gpt2-xl
-CNXT_LEN := 1024
+EMB := gpt2
+CNXT_LEN := 8 16 32 64 128 256 512 1024
 
 # Choose the window size to average for each point
 WS := 200
@@ -107,10 +107,10 @@ ALIGN_WITH := $(EMB)
 
 # Choose layer of embeddings to use
 # {1 for glove, 48 for gpt2, 8 for blenderbot encoder, 16 for blenderbot decoder}
-LAYER_IDX := 48
+LAYER_IDX := 12  # 48
 
 # Choose whether to PCA (0 or for no pca)
-PCA_TO := 50
+PCA_TO := 0  # 50
 
 # Specify the minimum word frequency (0 for 247, 5 for podcast)
 MWF := 0
@@ -132,8 +132,8 @@ NM := l2
 # Choose the command to run: python runs locally, echo is for debugging, sbatch
 # is for running on SLURM all lags in parallel.
 CMD := echo
-CMD := sbatch submit1.sh
 CMD := python
+CMD := sbatch --job-name=$(SID)-$(EMB)-$$layer-cnxt-$$context submit1.sh
 # {echo | python | sbatch submit1.sh}
 
 # datum
@@ -191,6 +191,7 @@ actually predicted by gpt2} (only used for glove embeddings)
 DM := lag2k-25-incorrect
 DM := lag10k-25-all
 DM := lag2k-25-improb
+DM := words-all
 
 ############## Model Modification ##############
 # {best-lag: run encoding using the best lag (lag model with highest correlation)}
@@ -221,6 +222,7 @@ run-encoding:
 	mkdir -p logs
 	$(CMD) scripts/$(FILE).py \
 		--project-id $(PRJCT_ID) \
+		--user-id $(USER) \
 		--pkl-identifier $(PKL_IDENTIFIER) \
 		--datum-emb-fn $(DS) \
 		--sid $(SID) \
@@ -254,6 +256,7 @@ run-encoding-layers:
 		for layer in $(LAYER_IDX); do\
 			$(CMD) scripts/$(FILE).py \
 				--project-id $(PRJCT_ID) \
+				--user-id $(USER) \
 				--pkl-identifier $(PKL_IDENTIFIER) \
 				--datum-emb-fn $(DS) \
 				--sid $(SID) \
@@ -276,7 +279,7 @@ run-encoding-layers:
 				$(SH) \
 				$(PSH) \
 				--normalize $(NM)\
-				--output-parent-dir $(DT)-$(PRJCT_ID)-$(PKL_IDENTIFIER)-$(SID)-$(EMB)-$(DM)-1024-$$layer \
+				--output-parent-dir $(DT)-$(PRJCT_ID)-$(PKL_IDENTIFIER)-$(SID)-$(EMB)-$(DM)-$$context-$$layer \
 				--output-prefix $(USR)-$(WS)ms-$(WV);\
 		done; \
 	done;
