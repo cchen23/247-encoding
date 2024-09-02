@@ -9,6 +9,7 @@ def parse_arguments():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--project-id", type=str, default=None)
+    parser.add_argument("--user-id", type=str, help="used to determine save path")
 
     # group = parser.add_mutually_exclusive_group()
     parser.add_argument("--sid", nargs="?", type=int, default=None)

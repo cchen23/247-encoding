@@ -13,8 +13,9 @@ def create_output_directory(args):
         parent_folder_name = "-".join([args.output_parent_dir, args.model_mod])
     else:
         parent_folder_name = args.output_parent_dir
+    SCRATCH_DIR = os.path.join("/scratch", "gpfs", args.user_id)
     full_output_dir = os.path.join(
-        os.getcwd(), "results", args.project_id, parent_folder_name, folder_name
+        SCRATCH_DIR, "results", args.project_id, parent_folder_name, folder_name
     )
 
     os.makedirs(full_output_dir, exist_ok=True)
@@ -49,7 +50,8 @@ def setup_environ(args):
     args.emb_type = clean_lm_model_name(args.emb_type)
     args.align_with = clean_lm_model_name(args.align_with)
 
-    INPUT_DIR = os.path.join(os.getcwd(), "data", args.project_id, str(args.sid))
+    SCRATCH_DIR = os.path.join("/scratch", "gpfs", args.user_id)
+    INPUT_DIR = os.path.join(SCRATCH_DIR, "results", args.project_id, str(args.sid))
 
     args.PICKLE_DIR = os.path.join(INPUT_DIR, "pickles")
     EMB_DIR = os.path.join(args.PICKLE_DIR, "embeddings")
