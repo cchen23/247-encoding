@@ -6,11 +6,11 @@ from multiprocessing import Pool
 
 import numpy as np
 import pandas as pd
+from tfsenc_config import setup_environ
 from tfsenc_load_signal import load_electrode_data
-from tfsenc_main import process_subjects, return_stitch_index, write_output
+from tfsenc_main import process_subjects, return_stitch_index
 from tfsenc_parser import parse_arguments
 from tfsenc_read_datum import read_datum
-from tfsenc_utils import setup_environ
 from utils import main_timer, write_config
 
 
@@ -26,11 +26,7 @@ def erp(args, datum, elec_signal, name):
     erp_comp = calc_average(args.lags, datum_comp, elec_signal)  # calculate average erp
     erp_prod = calc_average(args.lags, datum_prod, elec_signal)  # calculate average erp
 
-    print(f"writing output for electrode {name}")
-    write_output(args, erp_comp, name, "comp")
-    write_output(args, erp_prod, name, "prod")
-
-    return
+    return erp_comp, erp_prod
 
 
 def calc_average(lags, datum, brain_signal):
@@ -44,6 +40,10 @@ def calc_average(lags, datum, brain_signal):
         [type]: [description]
     """
     onsets = datum.adjusted_onset.values
+    max_lag = np.max(np.abs(lags))
+
+    # Only use words where the lag will not exceed size of brain_signal, because need to index into brain_signal later.
+    onsets = onsets[(onsets - max_lag >= 0) & (onsets + max_lag < len(brain_signal))]
     erp = np.zeros((len(onsets), len(lags)))
 
     for lag_idx, lag in enumerate(lags):  # loop through each lag
@@ -52,11 +52,13 @@ def calc_average(lags, datum, brain_signal):
             np.round_(onsets, 0, onsets) + lag_amount
         )  # take correct idx for all words
         index_onsets = index_onsets.astype(int)  # uncomment this if not running jit
+        index_onsets = index_onsets[(index_onsets >= 0) & (index_onsets < len(brain_signal))]
         erp[:, lag_idx] = brain_signal[index_onsets].reshape(
             -1
         )  # take the signal for that lag
 
-    erp = [np.mean(erp, axis=(0), dtype=np.float64).tolist()]  # average by words
+    #erp = [np.mean(erp, axis=(0), dtype=np.float64).tolist()]  # average by words
+    erp = np.mean(erp, axis=(0), dtype=np.float64)
 
     return erp
 
@@ -66,7 +68,7 @@ def load_and_erp(electrode, args, datum, stitch_index):
     elec_id, elec_name = electrode  # get electrode info
 
     # load electrode signal (with z_score)
-    elec_signal, missing_convos = load_electrode_data(args, elec_id, stitch_index, True)
+    elec_signal, missing_convos = load_electrode_data(args, args.sid, elec_id, stitch_index, True)
     elec_signal = elec_signal.reshape(-1, 1)
 
     # trim datum based on signal
@@ -86,9 +88,9 @@ def load_and_erp(electrode, args, datum, stitch_index):
         return None
 
     # do and save erp
-    erp(args, elec_datum, elec_signal, elec_name)
+    erp_comp, erp_prod = erp(args, elec_datum, elec_signal, elec_name)
 
-    return
+    return erp_comp, erp_prod
 
 
 def load_and_erp_parallel(args, electrode_info, datum, stitch_index):
@@ -106,9 +108,8 @@ def load_and_erp_parallel(args, electrode_info, datum, stitch_index):
                 electrode_info.items(),
             )
     else:
-        for index, subject, elec_name in electrode_info.itertuples(index=True):
-            load_and_erp(index, subject, elec_name, args, datum, stitch_index)
-
+        for _, ((_, elec_id), elec_name) in enumerate(electrode_info.items()):
+            load_and_erp((elec_id, elec_name), args, datum, stitch_index)
 
 @main_timer
 def main():
@@ -123,13 +124,12 @@ def main():
     write_config(vars(args))
 
     # Locate and read datum
-    datum = read_datum(args)
-    datum = datum.drop("embeddings", 1)  # trim datum to smaller size
+    stitch_index = return_stitch_index(args)
+    datum = read_datum(args, stitch_index)
+    datum = datum.drop("embeddings", axis=1)  # trim datum to smaller size
 
     assert args.sig_elec_file == None, "Do not input significant electrode list"
     electrode_info = process_subjects(args)
-    stitch_index = return_stitch_index(args)  # load stitch index
-    stitch_index = [0] + stitch_index
     load_and_erp_parallel(args, electrode_info, datum, stitch_index)
 
     return
