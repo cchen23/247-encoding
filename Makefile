@@ -23,14 +23,14 @@ PRJCT_ID := tfs
 # BC := --bad-convos 38 39
 
 # 717 Electrode IDs
-# SID := 7170
-# E_LIST := $(shell seq 1 256)
-# BC :=
+SID := 7170
+E_LIST := $(shell seq 1 256)
+BC :=
 
 # 798 Electrode IDs
-SID := 798
-E_LIST := $(shell seq 1 198)
-BC :=
+# SID := 798
+# E_LIST := $(shell seq 1 198)
+# BC :=
 
 # Sig file will override whatever electrodes you choose
 SIG_FN := 
@@ -82,8 +82,9 @@ LAGS := {-500..500..5} # lag500-5
 LAGS := -300000 -250000 -200000 200000 250000 300000 # lag300k-50k
 LAGS := -150000 -120000 -90000 90000 120000 150000 # lag150k-30k
 LAGS := -60000 -50000 -40000 -30000 -20000 20000 30000 40000 50000 60000 # lag60k-10k
-LAGS := {-10000..10000..25} # lag10k-25
 LAGS := {-2000..2000..25} # lag2k-25
+LAGS := {-60000..60000..500} # lag60k-100
+LAGS := {-10000..10000..100} # lag10k-25
 
 # Conversation ID (Choose 0 to run for all conversations)
 CONVERSATION_IDX := 0
@@ -91,10 +92,10 @@ CONVERSATION_IDX := 0
 # Choose which set of embeddings to use
 # {glove50 | gpt2-xl | blenderbot-small}
 EMB := blenderbot
-EMB := gpt2-xl
 EMB := blenderbot-small
 EMB := gpt2
-CNXT_LEN := 8 16 32 64 128 256 512 1024
+EMB := gpt2-xl
+CNXT_LEN := 256 # 8 16 32 64 128 256 512 1024
 
 # Choose the window size to average for each point
 WS := 200
@@ -107,7 +108,7 @@ ALIGN_WITH := $(EMB)
 
 # Choose layer of embeddings to use
 # {1 for glove, 48 for gpt2, 8 for blenderbot encoder, 16 for blenderbot decoder}
-LAYER_IDX := 12  # 48
+LAYER_IDX := 48  # 48
 
 # Choose whether to PCA (0 or for no pca)
 PCA_TO := 0  # 50
@@ -191,7 +192,7 @@ actually predicted by gpt2} (only used for glove embeddings)
 DM := lag2k-25-incorrect
 DM := lag10k-25-all
 DM := lag2k-25-improb
-DM := words-all
+DM := lag10k-100-shift-emb1-all
 
 ############## Model Modification ##############
 # {best-lag: run encoding using the best lag (lag model with highest correlation)}
@@ -453,14 +454,10 @@ The number of sig elec files should also equal # of sid * # of keys
 plot-new:
 	rm -f results/figures/*
 	python scripts/tfsplt_new.py \
-		--sid 625 \
+		--sid $(SID) \
 		--formats \
-			'results/tfs/20221012-glove-concat/kw-tfs-full-625-glove50-lag2k-25-all/*/*_%s.csv' \
-			'results/tfs/kw-tfs-full-625-glove50-lag2k-25-all-aligned/*/*_%s.csv' \
-			'results/tfs/kw-tfs-full-625-gpt2-xl-lag2k-25-all/*/*_%s.csv' \
-			'results/tfs/kw-tfs-full-625-gpt2-xl-lag2k-25-all-aligned/*/*_%s.csv' \
-			'results/tfs/kw-tfs-full-625-gpt2-xl-lag2k-25-all-shift-emb/*/*_%s.csv' \
-		--labels glove glove-aligned gpt2-n-1 gpt2-n-1-aligned gpt2-n \
+			'/scratch/gpfs/cc27/results/tfs/cc-tfs-full-798-gpt2-lag60k-500-shift-emb1-all//*/*_%s.csv' \
+		--labels gpt2 \
 		--keys comp prod \
 		$(SIG_FN) \
 		--fig-size $(FIG_SZ) \
@@ -470,8 +467,7 @@ plot-new:
 		$(LAG_TKS) \
 		$(LAG_TK_LABLS) \
 		$(PLT_PARAMS) \
-		--outfile results/figures/tfs-625-gpt2-sig.pdf
-	rsync -av results/figures/ ~/tigress/247-encoding-results/
+		--outfile /scratch/gpfs/cc27/results/figures/20240905_gpt2_layer12_long_lags.pdf
 
 
 # HAS_CTX := --has-ctx

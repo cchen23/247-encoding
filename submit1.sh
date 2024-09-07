@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --time=10:10:00
-#SBATCH --mem=64GB
+#SBATCH --time=23:10:00
+#SBATCH --mem=500GB
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
 #SBATCH --open-mode=truncate
@@ -28,12 +28,14 @@ export TRANSFORMERS_OFFLINE=1
 
 echo 'Requester:' $USER
 echo 'Node:' $HOSTNAME
+echo 'Job ID:' $SLURM_JOB_ID
 echo 'Start time:' `date`
 echo "$@"
 if [[ -v SLURM_ARRAY_TASK_ID ]]
 then
     python "$@" --electrodes $SLURM_ARRAY_TASK_ID
 else
+    echo "$@"
     python "$@"
 fi
 echo 'End time:' `date`
