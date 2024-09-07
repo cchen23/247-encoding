@@ -1,6 +1,7 @@
 import csv
 import glob
 import os
+import time
 from functools import partial
 from multiprocessing import Pool, cpu_count
 
@@ -17,7 +18,7 @@ from tfsenc_utils import (
     run_regression,
     write_encoding_results,
 )
-from utils import load_pickle, main_timer, write_config
+from utils import load_pickle, main_timer, print_profile, write_config
 
 
 def get_cpu_count(min_cpus=2):
@@ -69,7 +70,7 @@ def process_subjects(args):
         }
 
     else:  # electrode list for 1 sid
-        assert args.electrodes, "Need electrode list since no sig_elec_list"
+        assert args.electrodes is not None, "Need electrode list since no sig_elec_list"
         electrode_info = {
             (args.sid, key): next(
                 iter(
@@ -98,6 +99,9 @@ def single_electrode_encoding(electrode, args, datum, stitch_index):
     Returns:
         tuple in the format (sid, electrode name, production len, comprehension len)
     """
+    print(f"Starting electrode", electrode)
+    print_profile()
+    t0 = time.time()
     # Get electrode info
     (sid, elec_id), elec_name = electrode
 
@@ -109,6 +113,8 @@ def single_electrode_encoding(electrode, args, datum, stitch_index):
     elec_signal, missing_convos = load_electrode_data(
         args, sid, elec_id, stitch_index, False
     )
+    print(f"Loaded electrode signal {(time.time() - t0) / 60} min")
+    print_profile()
 
     # Modify datum based on signal
     if len(missing_convos) > 0:  # signal missing convos
@@ -124,6 +130,8 @@ def single_electrode_encoding(electrode, args, datum, stitch_index):
 
     # Build design matrices
     X, Y = build_XY(args, elec_datum, elec_signal)
+    print(f"Built XY for electrode", electrode, (time.time() - t0) / 60, "min")
+    print_profile()
 
     # Split into production and comprehension
     prod_X = X[elec_datum.speaker == "Speaker1", :]
@@ -170,14 +178,18 @@ def single_electrode_encoding(electrode, args, datum, stitch_index):
 
     if len(prod_train[0]) > 0 and len(prod_test[0]) > 0:
         prod_results = run_regression(args, *prod_train, *prod_test)
+        print(f"Done fitting prod, {(time.time() - t0) / 60}")
+        print_profile()
         write_encoding_results(args, prod_results, elec_name, "prod")
     if len(comp_train[0]) > 0 and len(comp_test[0]) > 0:
         comp_results = run_regression(args, *comp_train, *comp_test)
+        print(f"Done fitting comp, {(time.time() - t0) / 60}")
+        print_profile()
         write_encoding_results(args, comp_results, elec_name, "comp")
     return (sid, elec_name, len(prod_X), len(comp_X))
 
 
-def parallel_encoding(args, electrode_info, datum, stitch_index, parallel=True):
+def parallel_encoding(args, electrode_info, datum, stitch_index, parallel=False):
     """Doing encoding for all electrodes in parallel
 
     Args:

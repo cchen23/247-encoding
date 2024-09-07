@@ -50,7 +50,7 @@ def cv_lm_003_prod_comp(args, Xtra, Ytra, fold_tra, Xtes, Ytes, fold_tes, lag):
         print("running regression")
     else:
         print("running regression with best_lag")
-
+    print("Xtrain shape: ", Xtra.shape, "Ytra shape: ", Ytra.shape, "Xtest shape: ", Xtes.shape, "Ytest shape: ", Ytes.shape)
     if args.pca_to == 0:
         print(f"No PCA, emb_dim = {Xtes.shape[1]}")
     else:
@@ -63,6 +63,7 @@ def cv_lm_003_prod_comp(args, Xtra, Ytra, fold_tra, Xtes, Ytes, fold_tes, lag):
     Ynew = np.zeros((nSamps, nChans))
 
     for i in range(0, args.fold_num):
+        print(f"Running fold {i}/{args.fold_num}")
         Xtraf, Xtesf = Xtra[fold_tra != i], Xtes[fold_tes == i]
         Ytraf, Ytesf = Ytra[fold_tra != i], Ytes[fold_tes == i]
 
@@ -245,6 +246,7 @@ def write_encoding_results(args, cor_results, elec_name, mode):
     """
     trial_str = append_jobid_to_string(args, mode)
     filename = os.path.join(args.full_output_dir, elec_name + trial_str + ".csv")
+    print(f"Saving {mode} results for {elec_name} to {filename}")
 
     with open(filename, "w") as csvfile:
         print("writing file")
